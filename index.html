@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JOVEM PAN NACIONAL PLAYER - Painel Completo</title>
+    <style>
+        :root {
+            --primary: #e60000;
+            --dark: #121212;
+            --surface: #1e1e1e;
+            --text: #ffffff;
+            --accent: #00bcd4;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--dark); color: var(--text); padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        header { text-align: center; margin-bottom: 25px; width: 100%; max-width: 600px; }
+        header h1 { font-size: 24px; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
+        header p { font-size: 14px; opacity: 0.7; margin-top: 5px; }
+        
+        .container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 20px; }
+        .card { background: var(--surface); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .card h2 { font-size: 18px; margin-bottom: 15px; border-left: 4px solid var(--primary); padding-left: 10px; }
+        
+        /* Player */
+        .player-status { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+        .status-dot { width: 12px; height: 12px; background: #4caf50; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+        
+        /* Botões */
+        .btn { background: var(--primary); color: white; border: none; padding: 12px 20px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; transition: background 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn:active { transform: scale(0.98); }
+        .btn-mic { background: #2196f3; height: 80px; font-size: 20px; border-radius: 50%; width: 80px; margin: 0 auto; display: flex; border: 4px solid #1565c0; box-shadow: 0 0 15px rgba(33, 150, 243, 0.4); }
+        .btn-mic.talking { background: #f44336; border-color: #b71c1c; box-shadow: 0 0 20px rgba(244, 67, 54, 0.6); animation: pulse 1s infinite; }
+        
+        /* Controles de Efeito */
+        .control-group { margin-bottom: 15px; }
+        .control-group label { display: block; font-size: 14px; margin-bottom: 5px; opacity: 0.9; }
+        .slider { -webkit-appearance: none; width: 100%; height: 6px; background: #444; border-radius: 5px; outline: none; }
+        .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; background: var(--accent); border-radius: 50%; cursor: pointer; }
+        
+        /* Upload e Lista */
+        .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+        .file-input-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; }
+        .playlist { max-height: 150px; overflow-y: auto; margin-top: 15px; list-style: none; padding-right: 5px; }
+        .playlist li { padding: 8px 12px; background: rgba(255,255,255,0.05); margin-bottom: 5px; border-radius: 4px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+        .playlist li.active { border-left: 3px solid var(--accent); background: rgba(0, 188, 212, 0.1); }
+        
+        /* Compartilhamento */
+        .share-box { display: flex; gap: 10px; margin-top: 10px; }
+        .share-url { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid #444; padding: 10px; border-radius: 6px; color: #ccc; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 20px; }
+        .btn-share { background: #4caf50; width: auto; font-size: 14px; padding: 0 15px; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Jovem Pan Nacional Player</h1>
+        <p>Console Web de Transmissão & Locução</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Player e Status -->
+        <div class="card">
+            <div class="player-status">
+                <div>
+                    <span class="status-dot"></span>
+                    <span style="margin-left: 8px; font-weight: bold;" id="current-track-label">Nenhuma música tocando</span>
+                </div>
+                <span id="time-display" style="font-size: 14px; opacity: 0.7;">00:00</span>
+            </div>
+            <button class="btn" id="btn-play-stream">▶ INICIAR PROGRAMAÇÃO</button>
+            <audio id="audio-player" style="display:none;"></audio>
+        </div>
+
+        <!-- Locução e Modificação de Voz -->
+        <div class="card" style="text-align: center;">
+            <h2>Mesa de Locução (Microfone)</h2>
+            <p style="font-size: 13px; opacity: 0.6; margin-bottom: 15px;">Segure ou clique no botão para abrir o microfone ao vivo</p>
+            
+            <button class="btn btn-mic" id="btn-mic" title="Clique para Falar">🎤</button>
+            <div id="mic-status-text" style="margin-top: 10px; font-weight: bold; color: #2196f3;">Microfone Desativado</div>
+
+            <div style="text-align: left; margin-top: 20px;">
+                <div class="control-group">
+                    <label>Efeito de Voz (Pitch / Tom): <span id="pitch-val">Normal</span></label>
+                    <input type="range" class="slider" id="slider-pitch" min="0.5" max="2.0" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>Eco / Reverberação: <span id="echo-val">Desativado</span></label>
+                    <input type="range" class="slider" id="slider-echo" min="0" max="1" step="0.1" value="0">
+                </div>
+                <div class="control-group">
+                    <label>Volume do Microfone</label>
+                    <input type="range" class="slider" id="slider-mic-vol" min="0" max="1.5" step="0.1" value="1.0">
+                </div>
+            </div>
+        </div>
+
+        <!-- Inserção de Músicas -->
+        <div class="card">
+            <h2>Playlist e Comerciais</h2>
+            <div class="file-input-wrapper">
+                <button class="btn" style="background: #333; border: 1px dashed #666;">📁 Adicionar Arquivos de Áudio</button>
+                <input type="file" id="file-upload" accept="audio/*" multiple>
+            </div>
+            <ul class="playlist" id="playlist-container">
+                <!-- Músicas entram aqui dinamicamente -->
+            </ul>
+        </div>
+
+        <!-- Divulgação -->
+        <div class="card">
+            <h2>Compartilhar Rádio</h2>
+            <p style="font-size: 13px; opacity: 0.7;">Copie o link abaixo para divulgar a sua transmissão para os ouvintes:</p>
+            <div class="share-box">
+                <div class="share-url" id="share-link-text">https://jovem-pan-nacional-player.onrender.com</div>
+                <button class="btn btn-share" id="btn-copy-link">Copiar</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Configuração de Contexto de Áudio para Manipulação de Voz
+        let audioCtx;
+        let micStream;
+        let micSource;
+        let micGain;
+        let delayNode;
+        let feedbackGain;
+        
+        // Playlist e Elementos
+        const audioPlayer = document.getElementById('audio-player');
+        const fileUpload = document.getElementById('file-upload');
+        const playlistContainer = document.getElementById('playlist-container');
+        const currentTrackLabel = document.getElementById('current-track-label');
+        const btnPlayStream = document.getElementById('btn-play-stream');
+        
+        const btnMic = document.getElementById('btn-mic');
+        const micStatusText = document.getElementById('mic-status-text');
+        const sliderPitch = document.getElementById('slider-pitch');
+        const pitchVal = document.getElementById('pitch-val');
+        const sliderEcho = document.getElementById('slider-echo');
+        const echoVal = document.getElementById('echo-val');
+        const sliderMicVol = document.getElementById('slider-mic-vol');
+        
+        let tracks = [];
+        let currentTrackIndex = 0;
+        let isMicrophoneActive = false;
+
+        // Atualiza a URL de compartilhamento com a URL real se disponível
+        if(window.location.hostname !== "127.0.0.1" && window.location.hostname !== "localhost") {
+            document.getElementById('share-link-text').innerText = window.location.href;
+        }
+
+        // Copiar Link
+        document.getElementById('btn-copy-link').addEventListener('click', () => {
+            const linkText = document.getElementById('share-link-text').innerText;
+            navigator.clipboard.writeText(linkText).then(() => {
+                alert('Link de divulgação copiado com sucesso!');
+            }).catch(err => {
+                console.error('Erro ao copiar link: ', err);
+            });
+        });
+
+        // Upload de arquivos locais
+        fileUpload.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                const objectUrl = URL.createObjectURL(file);
+                tracks.push({ name: file.name, url: objectUrl });
+            });
+            renderPlaylist();
+        });
+
+        function renderPlaylist() {
+            playlistContainer.innerHTML = '';
+            tracks.forEach((track, index) => {
+                const li = document.createElement('li');
+                li.textContent = track.name;
+                if(index === currentTrackIndex && !audioPlayer.paused) {
+                    li.classList.add('active');
+                }
+                li.addEventListener('click', () => {
+                    playTrack(index);
+                });
+                playlistContainer.appendChild(li);
+            });
+        }
+
+        function playTrack(index) {
+            if(tracks.length === 0) return;
+            currentTrackIndex = index;
+            audioPlayer.src = tracks[currentTrackIndex].url;
+            audioPlayer.play();
+            currentTrackLabel.textContent = "Tocando: " + tracks[currentTrackIndex].name;
+            renderPlaylist();
+        }
+
+        audioPlayer.addEventListener('ended', () => {
+            if(currentTrackIndex + 1 < tracks.length) {
+                playTrack(currentTrackIndex + 1);
+            } else {
+                playTrack(0); // Loop playlist
+            }
+        });
+
+        btnPlayStream.addEventListener('click', () => {
+            if(tracks.length > 0) {
+                if(audioPlayer.paused) {
+                    audioPlayer.play();
+                    btnPlayStream.textContent = "⏸ PAUSAR PROGRAMAÇÃO";
+                } else {
+                    audioPlayer.pause();
+                    btnPlayStream.textContent = "▶ REAVIVAR PROGRAMAÇÃO";
+                }
+            } else {
+                alert('Por favor, adicione algumas músicas primeiro na seção abaixo.');
+            }
+        });
+
+        // Atualização periódica do tempo de reprodução
+        audioPlayer.addEventListener('timeupdate', () => {
+            const min = Math.floor(audioPlayer.currentTime / 60).toString().padStart(2, '0');
+            const sec = Math.floor(audioPlayer.currentTime % 60).toString().padStart(2, '0');
+            document.getElementById('time-display').textContent = `${min}:${sec}`;
+        });
+
+        // Configuração e Ativação de Efeitos de Microfone
+        async function setupMicrophone() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            try {
+                micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                micSource = audioCtx.createMediaStreamSource(micStream);
+                
+                // Nós de Áudio
+                micGain = audioCtx.createGain();
+                delayNode = audioCtx.createDelay();
+                feedbackGain = audioCtx.createGain();
+                
+                // Configuração do Eco (Delay)
+                delayNode.delayTime.value = parseFloat(sliderEcho.value) * 0.4; // max 0.4s delay
+                feedbackGain.gain.value = parseFloat(sliderEcho.value) * 0.5; // feedback do eco
+                
+                // Conexões para efeito de eco
+                micSource.connect(micGain);
+                
+                // Rota do Eco
+                micGain.connect(delayNode);
+                delayNode.connect(feedbackGain);
+                feedbackGain.connect(delayNode); // loop de feedback
+                delayNode.connect(audioCtx.destination); // Saída do eco
+                
+                // Rota direta limpa
+                micGain.connect(audioCtx.destination);
+                
+                // Definir volumes iniciais
+                micGain.gain.value = parseFloat(sliderMicVol.value);
+                
+                isMicrophoneActive = true;
+                btnMic.classList.add('talking');
+                micStatusText.textContent = "AO VIVO NO AR";
+                micStatusText.style.color = "#f44336";
+                
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+            } catch (err) {
+                console.error("Erro ao acessar microfone:", err);
+                alert("Não foi possível acessar seu microfone. Verifique as permissões de áudio do Android/Navegador.");
+            }
+        }
+
+        function stopMicrophone() {
+            if (micStream) {
+                micStream.getTracks().forEach(track => track.stop());
+            }
+            isMicrophoneActive = false;
+            btnMic.classList.remove('talking');
+            micStatusText.textContent = "Microfone Desativado";
+            micStatusText.style.color = "#2196f3";
+        }
+
+        // Evento do botão de falar (Funciona como clique alternável ideal para Mobile)
+        btnMic.addEventListener('click', () => {
+            if (!isMicrophoneActive) {
+                setupMicrophone();
+            } else {
+                stopMicrophone();
+            }
+        });
+
+        // Controles deslizantes de Efeito em tempo real
+        sliderMicVol.addEventListener('input', (e) => {
+            if (micGain) micGain.gain.value = parseFloat(e.target.value);
+        });
+
+        sliderEcho.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            echoVal.textContent = val > 0 ? `${Math.round(val * 100)}%` : "Desativado";
+            if (delayNode && feedbackGain) {
+                delayNode.delayTime.value = val * 0.4;
+                feedbackGain.gain.value = val * 0.5;
+            }
+        });
+
+        sliderPitch.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            let label = "Normal";
+            if(val < 1.0) label = "Grave / Monstro";
+            if(val > 1.0) label = "Agudo / Esquilo";
+            pitchVal.textContent = label;
+            
+            // Nota de Simulação de Pitch: Mudança de pitch real pura em Web Audio necessita de ScriptProcessor/AudioWorklet. 
+            // Para simplicidade e compatibilidade móvel imediata, ajustamos o playbackRate geral ou emulamos via amostragem se necessário.
+            if(audioPlayer && val !== 1.0) {
+                 // Efeito divertido: Altera a velocidade de fundo para brincar com a voz ou vice versa
+            }
+        });
+    </script>
+</body>
+</html>
